@@ -43,7 +43,7 @@ exports.handler = async (event) => {
 
   parts.push({ text: "Now respond with the grading JSON as instructed." });
 
-  const model = 'gemini-2.5-flash';
+     const model = 'gemini-flash-latest';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
   try {
