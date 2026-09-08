@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Checker — نتیجہ ساز</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --paper:#F6F5F0;
+    --paper-line:#DAD6C8;
+    --ink:#1F2A24;
+    --ink-soft:#5B655C;
+    --pen-green:#0F5C4B;
+    --pen-green-soft:#E4EFEA;
+    --pen-red:#B5432E;
+    --pen-red-soft:#F6E7E2;
+    --gold:#B08B2E;
+    --card:#FFFFFF;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(31,42,36,.06), 0 4px 14px rgba(31,42,36,.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px);
+    background-size: 100% 2.1em;
+    color:var(--ink);
+    font-family: 'Iowan Old Style','Source Serif 4', Georgia, 'Noto Nastaliq Urdu', serif;
+    line-height:1.5;
+    min-height:100vh;
+  }
+  .sans{ font-family: 'Inter', -apple-system, 'Segoe UI', 'Noto Sans Urdu', sans-serif; }
+  a{color:var(--pen-green);}
+  ::selection{ background: var(--pen-green-soft); }
+
+  header{
+    padding: 2.2em 1.5em 1.4em;
+    max-width: 980px;
+    margin: 0 auto;
+    border-bottom: 2px solid var(--ink);
+  }
+  header h1{
+    font-size: clamp(1.7rem, 3vw, 2.4rem);
+    margin: 0 0 .15em;
+    font-weight: 600;
+    letter-spacing: -.01em;
+  }
+  header p{
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 1.02rem;
+  }
+
+  .stepper{
+    max-width: 980px;
+    margin: 1.4em auto 0;
+    padding: 0 1.5em;
+    display:flex;
+    gap: .5em;
+  }
+  .step-btn{
+    font-family: inherit;
+    flex:1;
+    text-align:center;
+    padding: .7em .5em;
+    background: transparent;
+    border: 1px solid var(--paper-line);
+    border-bottom: 3px solid transparent;
+    border-radius: var(--radius) var(--radius) 0 0;
+    cursor:pointer;
+    color: var(--ink-soft);
+    font-size: .95rem;
+  }
+  .step-btn.active{
+    background: var(--card);
+    border-color: var(--paper-line);
+    border-bottom-color: var(--pen-green);
+    color: var(--ink);
+    font-weight: 600;
+    box-shadow: var(--shadow);
+  }
+  .step-btn .num{
+    display:inline-block;
+    width:1.4em; height:1.4em;
+    line-height:1.4em;
+    border-radius:50%;
+    background: var(--pen-green-soft);
+    color: var(--pen-green);
+    font-size:.8em;
+    margin-inline-end:.4em;
+  }
+  .step-btn.active .num{ background:var(--pen-green); color:#fff; }
+
+  main{
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 1.6em 1.5em 6em;
+  }
+  .panel{
+    background: var(--card);
+    border: 1px solid var(--paper-line);
+    border-radius: 0 var(--radius) var(--radius) var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.8em;
+  }
+  .panel h2{
+    margin-top:0;
+    font-size:1.3rem;
+  }
+  .field-row{
+    display:flex;
+    gap:1.2em;
+    flex-wrap:wrap;
+    margin-bottom:1.1em;
+  }
+  .field{
+    flex:1;
+    min-width:150px;
+  }
+  .field label{
+    display:block;
+    font-family:'Inter',sans-serif;
+    font-size:.8rem;
+    color:var(--ink-soft);
+    margin-bottom:.3em;
+  }
+  input[type=text], input[type=number], input[type=password]{
+    width:100%;
+    padding:.55em .7em;
+    border:1px solid var(--paper-line);
+    border-radius:6px;
+    font-family:'Inter',sans-serif;
+    font-size:.95rem;
+    background:#fff;
+    color:var(--ink);
+  }
+  input:focus, button:focus, textarea:focus{
+    outline: 2px solid var(--gold);
+    outline-offset:1px;
+  }
+  .type-block{
+    background: var(--paper);
+    border:1px solid var(--paper-line);
+    border-radius:8px;
+    padding:1em 1.1em;
+    margin-bottom:1em;
+  }
+  .type-block h3{
+    margin:0 0 .6em;
+    font-size:.95rem;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+  }
+  button{
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    border-radius:7px;
+    border:1px solid var(--ink);
+    background: var(--ink);
+    color:#fff;
+    padding:.65em 1.3em;
+    font-size:.92rem;
+  }
+  button.secondary{
+    background:transparent;
+    color:var(--ink);
+    border-color:var(--paper-line);
+  }
+  button.green{ background:var(--pen-green); border-color:var(--pen-green); }
+  button.ghost{
+    background:transparent;
+    border:none;
+    color:var(--pen-red);
+    padding:.3em .5em;
+    font-size:.85rem;
+  }
+  button:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .qtable{
+    width:100%;
+    border-collapse:collapse;
+    font-family:'Inter',sans-serif;
+    font-size:.85rem;
+    margin-top:.8em;
+  }
+  .qtable th,.qtable td{
+    border:1px solid var(--paper-line);
+    padding:.4em .5em;
+    text-align:center;
+  }
+  .qtable th{ background:var(--paper); font-weight:600; }
+  .qtable input[type=number]{ width:3.6em; text-align:center; padding:.25em; }
+  .qtable input[type=text]{ padding:.3em .4em; font-size:.85rem; }
+  .qtable td:nth-child(3){ text-align:left; }
+
+  .student-card{
+    border:1px solid var(--paper-line);
+    border-radius:8px;
+    padding:1em 1.1em;
+    margin-bottom:1em;
+    background:var(--paper);
+  }
+  .student-card .top-row{
+    display:flex;
+    gap:1em;
+    align-items:flex-end;
+    flex-wrap:wrap;
+  }
+  .thumbs{
+    display:flex;
+    gap:.5em;
+    flex-wrap:wrap;
+    margin-top:.7em;
+  }
+  .thumbs img{
+    width:64px; height:64px;
+    object-fit:cover;
+    border-radius:5px;
+    border:1px solid var(--paper-line);
+  }
+  .status-tag{
+    font-family:'Inter',sans-serif;
+    font-size:.78rem;
+    padding:.2em .6em;
+    border-radius:20px;
+    display:inline-block;
+  }
+  .status-pending{ background:#EEE; color:#666; }
+  .status-grading{ background:#FCF3D6; color:var(--gold); }
+  .status-done{ background:var(--pen-green-soft); color:var(--pen-green); }
+  .status-error{ background:var(--pen-red-soft); color:var(--pen-red); }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-family:'Inter',sans-serif;
+    font-size:.85rem;
+  }
+  th,td{
+    border:1px solid var(--paper-line);
+    padding:.5em .55em;
+    text-align:center;
+  }
+  th{
+    background:var(--paper);
+    font-weight:600;
+    white-space:nowrap;
+  }
+  td.name-cell{ text-align:right; font-family:inherit; font-size:.95rem; white-space:nowrap; }
+  td input[type=number]{
+    width:3.4em;
+    padding:.2em;
+    text-align:center;
+    border:1px solid transparent;
+    background:transparent;
+  }
+  td input[type=number]:hover, td input[type=number]:focus{
+    border-color:var(--paper-line);
+    background:#fff;
+  }
+  td.total-cell{ font-weight:700; color:var(--pen-green); }
+  .remark-btn{
+    background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:.9rem;
+  }
+  .table-wrap{ overflow-x:auto; }
+
+  .note{
+    font-family:'Inter',sans-serif;
+    font-size:.82rem;
+    color:var(--ink-soft);
+    margin-top:.6em;
+  }
+  .toast{
+    position:fixed;
+    bottom:1.5em; right:1.5em;
+    background:var(--ink);
+    color:#fff;
+    padding:.8em 1.2em;
+    border-radius:7px;
+    font-family:'Inter',sans-serif;
+    font-size:.88rem;
+    box-shadow:var(--shadow);
+    opacity:0;
+    transform:translateY(8px);
+    transition:.25s;
+    pointer-events:none;
+    z-index:50;
+  }
+  .toast.show{ opacity:1; transform:translateY(0); }
+
+  .modal-bg{
+    position:fixed; inset:0; background:rgba(31,42,36,.45);
+    display:none; align-items:center; justify-content:center; z-index:60; padding:1em;
+  }
+  .modal-bg.show{ display:flex; }
+  .modal{
+    background:#fff; border-radius:10px; max-width:420px; width:100%;
+    padding:1.5em; font-family:'Inter',sans-serif; font-size:.9rem;
+  }
+  .modal h4{ margin-top:0; }
+
+  footer{
+    text-align:center;
+    font-family:'Inter',sans-serif;
+    font-size:.78rem;
+    color:var(--ink-soft);
+    padding:2em 1em 3em;
+  }
+
+  @media print{
+    header, .stepper, footer, #addStudent, #gradeAll, #exportCsv, #printSheet, .note{ display:none !important; }
+    body{ background:#fff; }
+    .panel{ box-shadow:none; border:none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Test Checker <span class="sans" style="font-size:.55em;color:var(--ink-soft)">نتیجہ ساز</span></h1>
+  <p class="sans">Set up the paper, upload each student's answer sheet, and let AI mark it — you review and adjust before it's final.</p>
+</header>
+
+<nav class="stepper sans">
+  <button class="step-btn active" data-step="setup"><span class="num">1</span>Setup</button>
+  <button class="step-btn" data-step="upload"><span class="num">2</span>Upload &amp; Grade</button>
+  <button class="step-btn" data-step="results"><span class="num">3</span>Marksheet</button>
+</nav>
+
+<main>
+
+  <!-- STEP 1: SETUP -->
+  <section class="panel" id="panel-setup">
+    <h2>Paper setup <span class="sans" style="font-size:.6em;color:var(--ink-soft)">پرچہ کی تفصیل</span></h2>
+    <div class="field-row">
+      <div class="field">
+        <label class="sans">Test / paper name — ٹیسٹ کا نام</label>
+        <input type="text" id="testName" placeholder="e.g. Urdu Test — Chapter 4">
+      </div>
+    </div>
+
+    <div class="type-block">
+      <h3>MCQs — ملٹیپل چوائس</h3>
+      <div class="field-row" style="margin-bottom:0">
+        <div class="field"><label class="sans">Count</label><input type="number" id="mcqCount" min="0" value="0"></div>
+        <div class="field"><label class="sans">Marks each</label><input type="number" id="mcqMarks" min="0" value="1"></div>
+      </div>
+    </div>
+    <div class="type-block">
+      <h3>Short questions — مختصر سوالات</h3>
+      <div class="field-row" style="margin-bottom:0">
+        <div class="field"><label class="sans">Count</label><input type="number" id="shortCount" min="0" value="0"></div>
+        <div class="field"><label class="sans">Marks each</label><input type="number" id="shortMarks" min="0" value="2"></div>
+      </div>
+    </div>
+    <div class="type-block">
+      <h3>Long questions — تفصیلی سوالات</h3>
+      <div class="field-row" style="margin-bottom:0">
+        <div class="field"><label class="sans">Count</label><input type="number" id="longCount" min="0" value="0"></div>
+        <div class="field"><label class="sans">Marks each</label><input type="number" id="longMarks" min="0" value="5"></div>
+      </div>
+    </div>
+
+    <button id="genQuestions" class="green">Generate question list</button>
+    <span class="note" id="totalMarksNote"></span>
+
+    <div id="questionEditor" style="margin-top:1em;"></div>
+
+    <p class="note" style="margin-top:.9em;">Typing the correct answer per question above is optional but helps accuracy. You can also upload photo(s) of the answer key below — either or both is fine.</p>
+    <div class="field-row">
+      <div class="field" style="max-width:340px;">
+        <label class="sans">Answer key photo(s) — optional</label>
+        <input type="file" accept="image/*" multiple id="answerKeyFile">
+      </div>
+    </div>
+    <div class="thumbs" id="answerKeyThumbs"></div>
+
+    <hr style="border:none;border-top:1px solid var(--paper-line); margin:1.6em 0;">
+
+    <h3 class="sans" style="font-size:.95rem;">Class access code <span style="color:var(--ink-soft);font-weight:400;">(optional — only needed if the site owner set one)</span></h3>
+    <div class="field-row">
+      <div class="field" style="max-width:280px">
+        <input type="password" id="accessCode" placeholder="Access code">
+      </div>
+      <button class="secondary" id="saveKey" style="align-self:flex-start">Save code</button>
+    </div>
+    <p class="note">The AI key itself is kept privately on the server and is never visible on this page. If your teacher/admin protected this site with a code, enter it here — it's saved only in this browser.</p>
+
+    <div style="margin-top:1.4em;">
+      <button id="toUpload" class="green">Next: upload answer sheets →</button>
+    </div>
+  </section>
+
+  <!-- STEP 2: UPLOAD -->
+  <section class="panel" id="panel-upload" style="display:none;">
+    <h2>Upload answer sheets <span class="sans" style="font-size:.6em;color:var(--ink-soft)">بچوں کے پرچے اپلوڈ کریں</span></h2>
+    <p class="note">Add a student, upload one photo per page of their answer sheet, repeat for every student — then grade them all in one go.</p>
+
+    <div class="field-row" style="align-items:flex-end;">
+      <div class="field" style="max-width:320px;">
+        <label class="sans">Import student list from Excel — optional</label>
+        <input type="file" accept=".xlsx,.xls,.csv" id="excelFile">
+      </div>
+    </div>
+    <p class="note">First row should have headers — a column named "Name" (or "Student") and optionally "Roll" (or "Roll No"). Each row becomes a student; you'll still need to upload each one's answer sheet photo(s) below.</p>
+
+    <div id="studentsList"></div>
+    <button id="addStudent" class="secondary">+ Add student</button>
+
+    <div style="margin-top:1.6em; display:flex; gap:1em; align-items:center; flex-wrap:wrap;">
+      <button id="gradeAll" class="green">Grade all with AI</button>
+      <span class="note" id="gradeProgress"></span>
+    </div>
+  </section>
+
+  <!-- STEP 3: RESULTS -->
+  <section class="panel" id="panel-results" style="display:none;">
+    <h2>Marksheet <span class="sans" style="font-size:.6em;color:var(--ink-soft)">مارک شیٹ</span></h2>
+
+    <div class="field-row">
+      <div class="field"><label class="sans">School name</label><input type="text" id="schoolName"></div>
+      <div class="field"><label class="sans">Class / section</label><input type="text" id="className"></div>
+      <div class="field"><label class="sans">Checked by (teacher name)</label><input type="text" id="teacherName"></div>
+    </div>
+
+    <p class="note">Every mark below is editable — click a cell to correct it. Totals update automatically.</p>
+    <div id="printHeader" class="sans" style="display:none; font-size:.9rem; margin-bottom:.8em;"></div>
+    <div class="table-wrap"><table id="resultsTable"></table></div>
+    <div style="margin-top:1.3em; display:flex; gap:.7em;">
+      <button id="exportCsv" class="secondary">Download CSV</button>
+      <button id="printSheet" class="secondary">Print</button>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast sans" id="toast"></div>
+
+<div class="modal-bg" id="remarkModal">
+  <div class="modal">
+    <h4 id="remarkTitle">Remark</h4>
+    <p id="remarkBody" style="white-space:pre-wrap;"></p>
+    <button class="secondary" id="closeRemark">Close</button>
+  </div>
+</div>
+
+<footer>Runs in your browser · grading is handled by a private server function, your API key is never exposed</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+// ---------- state ----------
+let state = JSON.parse(localStorage.getItem('tc_state') || 'null') || {
+  config: { testName:'', questions: [] },
+  students: []
+};
+
+function save(){ localStorage.setItem('tc_state', JSON.stringify(state)); }
+
+function toast(msg){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+// ---------- stepper ----------
+$$('.step-btn').forEach(b=>b.addEventListener('click', ()=>goStep(b.dataset.step)));
+function goStep(step){
+  ['setup','upload','results'].forEach(s=>{
+    $('#panel-'+s).style.display = s===step ? '' : 'none';
+    $(`.step-btn[data-step="${s}"]`).classList.toggle('active', s===step);
+  });
+  if(step==='results'){
+    $('#schoolName').value = state.config.schoolName || '';
+    $('#className').value = state.config.className || '';
+    $('#teacherName').value = state.config.teacherName || '';
+    renderResultsTable();
+  }
+}
+['schoolName','className','teacherName'].forEach(id=>{
+  document.addEventListener('input', e=>{
+    if(e.target.id===id){ state.config[id] = e.target.value; save(); }
+  });
+});
+
+// ---------- setup ----------
+function renderQuestionEditor(){
+  const wrap = $('#questionEditor');
+  if(!state.config.questions.length){ wrap.innerHTML=''; $('#totalMarksNote').textContent=''; return; }
+  let total = state.config.questions.reduce((a,q)=>a+Number(q.marks||0),0);
+  $('#totalMarksNote').textContent = `  Total: ${state.config.questions.length} questions, ${total} marks`;
+  wrap.innerHTML = `<table class="qtable">
+    <tr><th>#</th><th>Type</th><th>Correct answer / key points — optional</th><th>Marks</th></tr>
+    ${state.config.questions.map((q,i)=>`
+      <tr>
+        <td>Q${q.num}</td>
+        <td>${q.type}</td>
+        <td><input type="text" data-i="${i}" class="qanswer" placeholder="e.g. B, or key points to look for" value="${(q.answer||'').replace(/"/g,'&quot;')}"></td>
+        <td><input type="number" min="0" data-i="${i}" class="qmarks" value="${q.marks}"></td>
+      </tr>`).join('')}
+  </table>`;
+  $$('.qmarks').forEach(inp=>inp.addEventListener('input', e=>{
+    state.config.questions[+e.target.dataset.i].marks = Number(e.target.value||0);
+    const t = state.config.questions.reduce((a,q)=>a+Number(q.marks||0),0);
+    $('#totalMarksNote').textContent = `  Total: ${state.config.questions.length} questions, ${t} marks`;
+    save();
+  }));
+  $$('.qanswer').forEach(inp=>inp.addEventListener('input', e=>{
+    state.config.questions[+e.target.dataset.i].answer = e.target.value;
+    save();
+  }));
+}
+
+$('#genQuestions').addEventListener('click', ()=>{
+  const mcqC = Number($('#mcqCount').value||0), mcqM = Number($('#mcqMarks').value||0);
+  const shC = Number($('#shortCount').value||0), shM = Number($('#shortMarks').value||0);
+  const loC = Number($('#longCount').value||0), loM = Number($('#longMarks').value||0);
+  let qs = [], n=1;
+  for(let i=0;i<mcqC;i++) qs.push({num:n++, type:'MCQ', marks:mcqM});
+  for(let i=0;i<shC;i++) qs.push({num:n++, type:'Short', marks:shM});
+  for(let i=0;i<loC;i++) qs.push({num:n++, type:'Long', marks:loM});
+  state.config.questions = qs;
+  state.config.testName = $('#testName').value;
+  save();
+  renderQuestionEditor();
+  toast(`Generated ${qs.length} questions`);
+});
+
+$('#saveKey').addEventListener('click', ()=>{
+  localStorage.setItem('tc_accesscode', $('#accessCode').value.trim());
+  toast('Access code saved in this browser');
+});
+
+// answer key photos (optional)
+function renderAnswerKeyThumbs(){
+  if(!state.config.answerKeyImages) state.config.answerKeyImages = [];
+  $('#answerKeyThumbs').innerHTML = state.config.answerKeyImages.map((im,j)=>
+    `<img src="${im}" data-j="${j}" class="ak-thumb-remove" title="Click to remove">`).join('');
+  $$('.ak-thumb-remove').forEach(img=>img.addEventListener('click', e=>{
+    state.config.answerKeyImages.splice(+e.target.dataset.j,1); save(); renderAnswerKeyThumbs();
+  }));
+}
+$('#answerKeyFile').addEventListener('change', async e=>{
+  if(!state.config.answerKeyImages) state.config.answerKeyImages = [];
+  const files = Array.from(e.target.files);
+  for(const f of files){
+    try{ const dataUrl = await resizeImage(f); state.config.answerKeyImages.push(dataUrl); }
+    catch(err){ console.error(err); }
+  }
+  save(); renderAnswerKeyThumbs();
+});
+$('#toUpload').addEventListener('click', ()=>{
+  if(!state.config.questions.length){ toast('Generate the question list first'); return; }
+  state.config.testName = $('#testName').value;
+  save();
+  goStep('upload');
+  renderStudents();
+});
+
+// restore setup fields on load
+function restoreSetup(){
+  $('#testName').value = state.config.testName || '';
+  const code = localStorage.getItem('tc_accesscode');
+  if(code) $('#accessCode').value = code;
+  renderQuestionEditor();
+  renderAnswerKeyThumbs();
+}
+
+// ---------- upload ----------
+function addStudent(){
+  state.students.push({ id: 'S'+Date.now()+Math.floor(Math.random()*1000), name:'', roll:'', images:[], status:'pending', perQuestion:null, error:null });
+  save();
+  renderStudents();
+}
+$('#addStudent').addEventListener('click', addStudent);
+
+$('#excelFile').addEventListener('change', async e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval:'' });
+    let added = 0;
+    rows.forEach(row=>{
+      const keys = Object.keys(row);
+      const nameKey = keys.find(k=>/^(name|student|student name)$/i.test(k.trim())) || keys[0];
+      const rollKey = keys.find(k=>/^(roll|roll no|roll number|roll no\.)$/i.test(k.trim())) || keys[1];
+      const name = String(row[nameKey]||'').trim();
+      const roll = rollKey ? String(row[rollKey]||'').trim() : '';
+      if(!name) return;
+      state.students.push({ id:'S'+Date.now()+Math.floor(Math.random()*1000)+added, name, roll, images:[], status:'pending', perQuestion:null, error:null });
+      added++;
+    });
+    save(); renderStudents();
+    toast(`Imported ${added} students`);
+  }catch(err){
+    console.error(err);
+    toast('Could not read that file — check it\'s a valid Excel/CSV file');
+  }
+  e.target.value = '';
+});
+
+function resizeImage(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxDim = 1500;
+        let {width,height} = img;
+        if(width>maxDim || height>maxDim){
+          const scale = maxDim/Math.max(width,height);
+          width = Math.round(width*scale); height = Math.round(height*scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width=width; canvas.height=height;
+        canvas.getContext('2d').drawImage(img,0,0,width,height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderStudents(){
+  const wrap = $('#studentsList');
+  if(!state.students.length){ wrap.innerHTML = '<p class="note">No students added yet.</p>'; return; }
+  wrap.innerHTML = state.students.map((s,i)=>`
+    <div class="student-card" data-i="${i}">
+      <div class="top-row">
+        <div class="field" style="max-width:220px;">
+          <label class="sans">Name — نام</label>
+          <input type="text" class="stu-name" data-i="${i}" value="${s.name.replace(/"/g,'&quot;')}">
+        </div>
+        <div class="field" style="max-width:140px;">
+          <label class="sans">Roll no.</label>
+          <input type="text" class="stu-roll" data-i="${i}" value="${s.roll.replace(/"/g,'&quot;')}">
+        </div>
+        <div class="field" style="max-width:260px;">
+          <label class="sans">Answer sheet photo(s)</label>
+          <input type="file" accept="image/*" multiple class="stu-file" data-i="${i}">
+        </div>
+        <span class="status-tag status-${s.status}">${s.status}</span>
+        <button class="ghost" data-remove="${i}">Remove</button>
+      </div>
+      <div class="thumbs">${s.images.map((im,j)=>`<img src="${im}" data-i="${i}" data-j="${j}" class="thumb-remove" title="Click to remove">`).join('')}</div>
+      ${s.error ? `<p class="note" style="color:var(--pen-red)">${s.error}</p>` : ''}
+    </div>
+  `).join('');
+
+  $$('.stu-name').forEach(inp=>inp.addEventListener('input', e=>{ state.students[+e.target.dataset.i].name = e.target.value; save(); }));
+  $$('.stu-roll').forEach(inp=>inp.addEventListener('input', e=>{ state.students[+e.target.dataset.i].roll = e.target.value; save(); }));
+  $$('[data-remove]').forEach(b=>b.addEventListener('click', e=>{
+    state.students.splice(+e.target.dataset.remove,1); save(); renderStudents();
+  }));
+  $$('.thumb-remove').forEach(img=>img.addEventListener('click', e=>{
+    const i=+e.target.dataset.i, j=+e.target.dataset.j;
+    state.students[i].images.splice(j,1); save(); renderStudents();
+  }));
+  $$('.stu-file').forEach(inp=>inp.addEventListener('change', async e=>{
+    const i = +e.target.dataset.i;
+    const files = Array.from(e.target.files);
+    for(const f of files){
+      try{ const dataUrl = await resizeImage(f); state.students[i].images.push(dataUrl); }
+      catch(err){ console.error(err); }
+    }
+    save(); renderStudents();
+  }));
+}
+
+// ---------- grading ----------
+async function gradeStudent(student){
+  if(!student.images.length) throw new Error('No photos uploaded for this student.');
+  const accessCode = localStorage.getItem('tc_accesscode') || '';
+
+  const qList = state.config.questions.map(q=>{
+    const ans = (q.answer||'').trim();
+    return `Q${q.num} (${q.type}, max ${q.marks} marks)` + (ans ? ` — correct answer/key points: ${ans}` : '');
+  }).join('; ');
+  const hasKeyImages = (state.config.answerKeyImages||[]).length > 0;
+  const systemPrompt = `You are a strict but fair exam checker. You will be shown photo(s) of one student's handwritten or printed answer sheet for a test called "${state.config.testName||'Test'}". The paper has these questions: ${qList}.${hasKeyImages ? ' Reference answer-key photo(s) are also provided first, before the student photos — use them as the source of truth for correct answers.' : ''}
+Read the student's answers from the photo(s) carefully, evaluate each answer against what a correct answer should be (using any provided correct answers/key points above and any reference answer-key photos), and award marks out of the stated maximum for each question. If a question was not attempted, award 0 and say so in the remark.
+Respond with ONLY a raw JSON object, no markdown fences, no extra text, in exactly this shape:
+{"per_question":[{"num":1,"awarded":<number>,"remark":"<one short sentence>"}, ...],"overall_remark":"<one short sentence on the student's overall performance>"}
+Include one entry in per_question for every question listed above, num matching the question number, in order.`;
+
+  const toImgObj = dataUrl=>{
+    const [meta, b64] = dataUrl.split(',');
+    const mediaType = meta.match(/data:(.*);base64/)[1];
+    return { media_type: mediaType, data: b64 };
+  };
+  const images = student.images.map(toImgObj);
+  const referenceImages = (state.config.answerKeyImages||[]).map(toImgObj);
+
+  const resp = await fetch('/.netlify/functions/grade', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify({ accessCode, systemPrompt, images, referenceImages })
+  });
+
+  const data = await resp.json();
+  if(!resp.ok){
+    throw new Error(data.error || ('Server error: ' + resp.status));
+  }
+  const textBlock = (data.content||[]).find(b=>b.type==='text');
+  if(!textBlock) throw new Error('No text response from model.');
+  let clean = textBlock.text.trim().replace(/^```json/,'').replace(/^```/,'').replace(/```$/,'').trim();
+  let parsed;
+  try{ parsed = JSON.parse(clean); }
+  catch(e){ throw new Error('Could not parse AI response as JSON.'); }
+  return parsed;
+}
+
+$('#gradeAll').addEventListener('click', async ()=>{
+  if(!state.students.length){ toast('Add at least one student first'); return; }
+  const btn = $('#gradeAll'); btn.disabled = true;
+  let done=0;
+  const total = state.students.filter(s=>s.status!=='done').length || state.students.length;
+  for(const s of state.students){
+    if(s.status==='done') continue;
+    s.status='grading'; s.error=null; save(); renderStudents();
+    $('#gradeProgress').textContent = `Grading ${s.name||'student'}... (${done+1}/${total})`;
+    try{
+      const result = await gradeStudent(s);
+      s.perQuestion = result.per_question.map(pq=>{
+        const q = state.config.questions.find(q=>q.num===pq.num);
+        return { num: pq.num, awarded: Math.min(Number(pq.awarded)||0, q?q.marks:99), remark: pq.remark||'' };
+      });
+      s.overallRemark = result.overall_remark || '';
+      s.status='done';
+    }catch(err){
+      s.status='error'; s.error = err.message;
+      console.error(err);
+    }
+    done++; save(); renderStudents();
+  }
+  $('#gradeProgress').textContent = 'Done grading.';
+  btn.disabled=false;
+  goStep('results');
+});
+
+// ---------- results ----------
+function studentTotal(s){
+  if(!s.perQuestion) return 0;
+  return s.perQuestion.reduce((a,pq)=>a+Number(pq.awarded||0),0);
+}
+function maxTotal(){
+  return state.config.questions.reduce((a,q)=>a+Number(q.marks||0),0);
+}
+
+function renderResultsTable(){
+  const table = $('#resultsTable');
+  const qs = state.config.questions;
+  if(!state.students.length || !qs.length){
+    table.innerHTML = '<tr><td class="sans">No data yet — set up a paper and grade some students first.</td></tr>';
+    return;
+  }
+  let head = `<tr><th class="sans">Student</th>` + qs.map(q=>`<th class="sans">Q${q.num}<br><span style="font-weight:400;color:var(--ink-soft)">/${q.marks}</span></th>`).join('') + `<th class="sans">Total<br><span style="font-weight:400">/${maxTotal()}</span></th><th class="sans">Remark</th></tr>`;
+  let rows = state.students.map((s,si)=>{
+    const cells = qs.map(q=>{
+      const pq = s.perQuestion ? s.perQuestion.find(p=>p.num===q.num) : null;
+      const val = pq ? pq.awarded : '';
+      return `<td><input type="number" min="0" max="${q.marks}" class="mark-input" data-si="${si}" data-qnum="${q.num}" value="${val}"></td>`;
+    }).join('');
+    const statusNote = s.status!=='done' ? `<span class="status-tag status-${s.status}">${s.status==='error'?'error':s.status}</span>` : '';
+    return `<tr>
+      <td class="name-cell">${s.name||'(unnamed)'} ${s.roll?`<span style="color:var(--ink-soft);font-size:.85em">#${s.roll}</span>`:''}</td>
+      ${cells}
+      <td class="total-cell" id="total-${si}">${s.perQuestion?studentTotal(s):'—'}</td>
+      <td>${s.perQuestion ? `<button class="remark-btn" data-si="${si}">view</button>` : statusNote}</td>
+    </tr>`;
+  }).join('');
+  table.innerHTML = head + rows;
+
+  $$('.mark-input').forEach(inp=>inp.addEventListener('input', e=>{
+    const si = +e.target.dataset.si, qnum = +e.target.dataset.qnum;
+    const s = state.students[si];
+    if(!s.perQuestion) s.perQuestion = qs.map(q=>({num:q.num, awarded:0, remark:''}));
+    const pq = s.perQuestion.find(p=>p.num===qnum);
+    pq.awarded = Number(e.target.value||0);
+    $('#total-'+si).textContent = studentTotal(s);
+    save();
+  }));
+  $$('.remark-btn').forEach(b=>b.addEventListener('click', e=>{
+    const s = state.students[+e.target.dataset.si];
+    $('#remarkTitle').textContent = (s.name||'Student') + ' — remarks';
+    $('#remarkBody').textContent = (s.perQuestion||[]).map(pq=>`Q${pq.num}: ${pq.awarded} — ${pq.remark}`).join('\\n') + (s.overallRemark ? `\\n\\nOverall: ${s.overallRemark}` : '');
+    $('#remarkModal').classList.add('show');
+  }));
+}
+$('#closeRemark').addEventListener('click', ()=>$('#remarkModal').classList.remove('show'));
+
+$('#exportCsv').addEventListener('click', ()=>{
+  const qs = state.config.questions;
+  let lines = [];
+  if(state.config.testName) lines.push('Test,' + state.config.testName);
+  if(state.config.schoolName) lines.push('School,' + state.config.schoolName);
+  if(state.config.className) lines.push('Class,' + state.config.className);
+  if(state.config.teacherName) lines.push('Checked by,' + state.config.teacherName);
+  if(lines.length) lines.push('');
+  lines.push('Student,Roll,' + qs.map(q=>'Q'+q.num).join(',') + ',Total');
+  state.students.forEach(s=>{
+    const marks = qs.map(q=>{
+      const pq = s.perQuestion ? s.perQuestion.find(p=>p.num===q.num) : null;
+      return pq ? pq.awarded : '';
+    });
+    lines.push([s.name, s.roll, ...marks, s.perQuestion?studentTotal(s):''].join(','));
+  });
+  const blob = new Blob([lines.join('\\n')], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = (state.config.testName||'marksheet') + '.csv';
+  a.click();
+});
+$('#printSheet').addEventListener('click', ()=>{
+  const c = state.config;
+  const bits = [];
+  if(c.testName) bits.push(`<strong>${c.testName}</strong>`);
+  if(c.schoolName) bits.push(c.schoolName);
+  if(c.className) bits.push('Class: '+c.className);
+  if(c.teacherName) bits.push('Checked by: '+c.teacherName);
+  $('#printHeader').innerHTML = bits.join(' &nbsp;·&nbsp; ');
+  $('#printHeader').style.display = bits.length ? '' : 'none';
+  window.print();
+});
+
+// ---------- init ----------
+restoreSetup();
+renderStudents();
+</script>
+</body>
+</html>
