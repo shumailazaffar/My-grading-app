@@ -380,7 +380,34 @@
 
     <hr style="border:none;border-top:1px solid var(--paper-line); margin:1.6em 0;">
 
+    <h3 class="sans" style="font-size:.95rem;">AI grading options</h3>
+    <div class="field-row">
+      <div class="field" style="max-width:260px">
+        <label class="sans">AI model</label>
+        <select id="aiModel">
+          <option value="gemini-3.5-flash">Gemini 3.5 Flash — recommended, free</option>
+          <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite — fastest, free</option>
+          <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro — most accurate, paid tier only</option>
+        </select>
+      </div>
+      <div class="field" style="max-width:260px">
+        <label class="sans">Remarks language</label>
+        <select id="outputLanguage">
+          <option value="English">English</option>
+          <option value="Urdu">اردو — Urdu</option>
+          <option value="Punjabi">پنجابی — Punjabi</option>
+          <option value="Sindhi">سندھی — Sindhi</option>
+          <option value="Pashto">پښتو — Pashto</option>
+          <option value="Arabic">العربية — Arabic</option>
+        </select>
+      </div>
+    </div>
+    <p class="note">This sets the language the AI writes its remarks in — it doesn't need to match the paper's own language.</p>
+
+    <hr style="border:none;border-top:1px solid var(--paper-line); margin:1.6em 0;">
+
     <h3 class="sans" style="font-size:.95rem;">Class access code <span style="color:var(--ink-soft);font-weight:400;">(optional — only needed if the site owner set one)</span></h3>
+    
     <div class="field-row">
       <div class="field" style="max-width:280px">
         <input type="password" id="accessCode" placeholder="Access code">
@@ -455,9 +482,11 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 
 // ---------- state ----------
 let state = JSON.parse(localStorage.getItem('tc_state') || 'null') || {
-  config: { testName:'', questions: [] },
+  config: { testName:'', questions: [], model:'gemini-3.5-flash', outputLanguage:'English' },
   students: []
 };
+if(!state.config.model) state.config.model = 'gemini-3.5-flash';
+if(!state.config.outputLanguage) state.config.outputLanguage = 'English';
 
 function save(){ localStorage.setItem('tc_state', JSON.stringify(state)); }
 
@@ -565,11 +594,15 @@ $('#toUpload').addEventListener('click', ()=>{
 // restore setup fields on load
 function restoreSetup(){
   $('#testName').value = state.config.testName || '';
+  $('#aiModel').value = state.config.model || 'gemini-3.5-flash';
+  $('#outputLanguage').value = state.config.outputLanguage || 'English';
   const code = localStorage.getItem('tc_accesscode');
   if(code) $('#accessCode').value = code;
   renderQuestionEditor();
   renderAnswerKeyThumbs();
 }
+$('#aiModel').addEventListener('change', e=>{ state.config.model = e.target.value; save(); });
+$('#outputLanguage').addEventListener('change', e=>{ state.config.outputLanguage = e.target.value; save(); });
 
 // ---------- upload ----------
 function addStudent(){
@@ -687,13 +720,14 @@ async function gradeStudent(student){
     const ans = (q.answer||'').trim();
     return `Q${q.num} (${q.type}, max ${q.marks} marks)` + (ans ? ` — correct answer/key points: ${ans}` : '');
   }).join('; ');
-  const hasKeyImages = (state.config.answerKeyImages||[]).length > 0;
+    const hasKeyImages = (state.config.answerKeyImages||[]).length > 0;
+  const remarkLanguage = state.config.outputLanguage || 'English';
   const systemPrompt = `You are a strict but fair exam checker. You will be shown photo(s) of one student's handwritten or printed answer sheet for a test called "${state.config.testName||'Test'}". The paper has these questions: ${qList}.${hasKeyImages ? ' Reference answer-key photo(s) are also provided first, before the student photos — use them as the source of truth for correct answers.' : ''}
 Read the student's answers from the photo(s) carefully, evaluate each answer against what a correct answer should be (using any provided correct answers/key points above and any reference answer-key photos), and award marks out of the stated maximum for each question. If a question was not attempted, award 0 and say so in the remark.
+Write every "remark" and the "overall_remark" in ${remarkLanguage}, regardless of what language the paper itself is written in. Keep the JSON structure and field names exactly as specified below, in English.
 Respond with ONLY a raw JSON object, no markdown fences, no extra text, in exactly this shape:
-{"per_question":[{"num":1,"awarded":<number>,"remark":"<one short sentence>"}, ...],"overall_remark":"<one short sentence on the student's overall performance>"}
+{"per_question":[{"num":1,"awarded":<number>,"remark":"<one short sentence, in ${remarkLanguage}>"}, ...],"overall_remark":"<one short sentence on the student's overall performance, in ${remarkLanguage}>"}
 Include one entry in per_question for every question listed above, num matching the question number, in order.`;
-
   const toImgObj = dataUrl=>{
     const [meta, b64] = dataUrl.split(',');
     const mediaType = meta.match(/data:(.*);base64/)[1];
@@ -702,12 +736,11 @@ Include one entry in per_question for every question listed above, num matching 
   const images = student.images.map(toImgObj);
   const referenceImages = (state.config.answerKeyImages||[]).map(toImgObj);
 
-  const resp = await fetch('/.netlify/functions/grade', {
+   const resp = await fetch('/.netlify/functions/grade', {
     method:'POST',
     headers:{ 'Content-Type':'application/json' },
-    body: JSON.stringify({ accessCode, systemPrompt, images, referenceImages })
+    body: JSON.stringify({ accessCode, systemPrompt, images, referenceImages, model: state.config.model || 'gemini-3.5-flash' })
   });
-
   const data = await resp.json();
   if(!resp.ok){
     throw new Error(data.error || ('Server error: ' + resp.status));
