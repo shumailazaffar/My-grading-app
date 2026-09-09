@@ -43,9 +43,15 @@ exports.handler = async (event) => {
 
   parts.push({ text: "Now respond with the grading JSON as instructed." });
 
-     const model = 'gemini-flash-latest';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
-
+       // Only allow models we've actually put in the dropdown — never trust the
+  // client to send an arbitrary model string straight into the API call.
+  const ALLOWED_MODELS = [
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-pro-preview'
+  ];
+  const chosenModel = ALLOWED_MODELS.includes(model) ? model : 'gemini-3.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${chosenModel}:generateContent?key=${process.env.GEMINI_API_KEY}`;
   try {
     const resp = await fetch(url, {
       method: 'POST',
