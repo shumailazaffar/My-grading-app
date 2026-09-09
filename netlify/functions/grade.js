@@ -16,7 +16,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Bad request body' }) };
   }
 
-  const { accessCode, systemPrompt, images, referenceImages } = body;
+  const { accessCode, systemPrompt, images, referenceImages, model } = body;
 
   // Optional class access-code check. Set ACCESS_CODE in Netlify env vars to enable it.
   if (process.env.ACCESS_CODE && accessCode !== process.env.ACCESS_CODE) {
