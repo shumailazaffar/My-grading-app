@@ -16,15 +16,18 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Bad request body' }) };
   }
 
-  const { accessCode, systemPrompt, images, referenceImages, model } = body;
+  const { accessCode, systemPrompt, images, referenceImages, model, apiKey } = body;
 
   // Optional class access-code check. Set ACCESS_CODE in Netlify env vars to enable it.
-  if (process.env.ACCESS_CODE && accessCode !== process.env.ACCESS_CODE) {
+  // Skipped for anyone who supplied their own Gemini key — they're not spending
+  // your quota, so there's nothing to protect them from.
+  if (!apiKey && process.env.ACCESS_CODE && accessCode !== process.env.ACCESS_CODE) {
     return { statusCode: 401, body: JSON.stringify({ error: 'Wrong access code.' }) };
   }
 
-  if (!process.env.GEMINI_API_KEY) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'Server is missing GEMINI_API_KEY. Set it in Netlify site settings.' }) };
+  const geminiKey = apiKey || process.env.GEMINI_API_KEY;
+  if (!geminiKey) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'No Gemini API key available — either the server is missing GEMINI_API_KEY, or paste your own key on the setup page.' }) };
   }
 
   if (!Array.isArray(images) || images.length === 0) {
@@ -43,22 +46,24 @@ exports.handler = async (event) => {
 
   parts.push({ text: "Now respond with the grading JSON as instructed." });
 
-       // Only allow models we've actually put in the dropdown — never trust the
-  // client to send an arbitrary model string straight into the API call.
+  // Only allow models from the dropdown when using the shared server key — nobody
+  // should be able to rack up unexpected charges on your account. Anyone using
+  // their OWN key is spending their own money, so let them request any model.
   const ALLOWED_MODELS = [
     'gemini-3.5-flash',
     'gemini-3.5-flash-lite',
     'gemini-3.1-pro-preview'
   ];
-  const chosenModel = ALLOWED_MODELS.includes(model) ? model : 'gemini-3.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${chosenModel}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  const chosenModel = apiKey ? (model || 'gemini-3.5-flash') : (ALLOWED_MODELS.includes(model) ? model : 'gemini-3.5-flash');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${chosenModel}:generateContent?key=${geminiKey}`;
+
   try {
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 2000 }
+        generationConfig: { temperature: 0.2, maxOutputTokens: 3000 }
       })
     });
 
@@ -72,7 +77,6 @@ exports.handler = async (event) => {
       return { statusCode: 502, body: JSON.stringify({ error: 'Empty response from Gemini.' }) };
     }
 
-    // Return in the same shape the frontend already expects (a "text" content block)
     return { statusCode: 200, body: JSON.stringify({ content: [{ type: 'text', text }] }) };
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
