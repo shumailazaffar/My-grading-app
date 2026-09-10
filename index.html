@@ -818,7 +818,7 @@ function renderStudents(){
     const i=+e.target.dataset.i, j=+e.target.dataset.j;
     state.students[i].images.splice(j,1); save(); renderStudents();
   }));
-     $$('.stu-file').forEach(inp=>inp.addEventListener('change', async e=>{
+   $$('.stu-file').forEach(inp=>inp.addEventListener('change', async e=>{
     const i = +e.target.dataset.i;
     const files = Array.from(e.target.files);
     for(const f of files){
@@ -830,14 +830,7 @@ function renderStudents(){
   $$('.scan-btn').forEach(b=>b.addEventListener('click', e=>{
     openCamera(+e.target.dataset.i);
   }));
-}
-  }));
-  $$('.scan-btn').forEach(b=>b.addEventListener('click', e=>{
-    openCamera(+e.target.dataset.i);
-  }));
-}
-  }));
-}
+}   
 
 // ---------- grading ----------
 async function gradeStudent(student){
