@@ -370,11 +370,12 @@
     <div id="questionEditor" style="margin-top:1em;"></div>
 
     <p class="note" style="margin-top:.9em;">Typing the correct answer per question above is optional but helps accuracy. You can also upload photo(s) of the answer key below — either or both is fine.</p>
-    <div class="field-row">
+    <div class="field-row" style="align-items:flex-end;">
       <div class="field" style="max-width:340px;">
         <label class="sans">Answer key photo(s) — optional</label>
         <input type="file" accept="image/*" multiple id="answerKeyFile">
       </div>
+      <button class="secondary" type="button" id="scanAnswerKey">📷 Scan with camera</button>
     </div>
     <div class="thumbs" id="answerKeyThumbs"></div>
 
@@ -495,8 +496,20 @@
   </div>
 </div>
 
-<footer>Runs in your browser · grading is handled by a private server function, your API key is never exposed</footer>
+<div class="modal-bg" id="cameraModal">
+  <div class="modal" style="max-width:560px;">
+    <h4>Scan answer sheet <span class="sans" style="font-size:.6em;color:var(--ink-soft)">— <span id="cameraTargetName"></span></span></h4>
+    <video id="cameraVideo" autoplay playsinline muted style="width:100%;border-radius:8px;background:#000;display:block;"></video>
+    <p class="note" id="cameraCount">0 page(s) captured</p>
+    <div style="display:flex;gap:.7em;margin-top:.8em;flex-wrap:wrap;">
+      <button class="green" type="button" id="captureShot">📷 Capture page</button>
+      <button class="secondary" type="button" id="switchCamera">Switch camera</button>
+      <button class="secondary" type="button" id="closeCameraModal">Done</button>
+    </div>
+  </div>
+</div>
 
+<footer>Runs in your browser · grading is handled by a private server function, your API key is never exposed</footer>
 <script>
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -695,6 +708,81 @@ function resizeImage(file){
   });
 }
 
+// ---------- camera scanning ----------
+let cameraStream = null;
+let cameraTarget = null;   // a student index (number), or 'answerkey'
+let cameraFacing = 'environment';
+
+function cameraTargetImages(){
+  if(cameraTarget==='answerkey'){
+    if(!state.config.answerKeyImages) state.config.answerKeyImages = [];
+    return state.config.answerKeyImages;
+  }
+  return state.students[cameraTarget].images;
+}
+
+async function openCamera(target){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    toast('Camera not supported in this browser — use the file picker instead');
+    return;
+  }
+  cameraTarget = target;
+  $('#cameraTargetName').textContent = target==='answerkey' ? 'Answer key' : (state.students[target]?.name || 'Student');
+  $('#cameraCount').textContent = cameraTargetImages().length + ' page(s) so far';
+  $('#cameraModal').classList.add('show');
+  await startCameraStream();
+}
+
+async function startCameraStream(){
+  stopCameraStream();
+  try{
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode: cameraFacing }, audio:false });
+    $('#cameraVideo').srcObject = cameraStream;
+  }catch(err){
+    toast('Could not open camera — check camera permission for this site');
+    closeCamera();
+  }
+}
+
+function stopCameraStream(){
+  if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+}
+
+function closeCamera(){
+  stopCameraStream();
+  $('#cameraModal').classList.remove('show');
+  cameraTarget = null;
+  save();
+  renderStudents();
+  renderAnswerKeyThumbs();
+}
+
+function capturePage(){
+  const video = $('#cameraVideo');
+  if(cameraTarget===null || !video.videoWidth) return;
+  const maxDim = 1500;
+  let width = video.videoWidth, height = video.videoHeight;
+  if(width>maxDim || height>maxDim){
+    const scale = maxDim/Math.max(width,height);
+    width = Math.round(width*scale); height = Math.round(height*scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  canvas.getContext('2d').drawImage(video,0,0,width,height);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+  cameraTargetImages().push(dataUrl);
+  $('#cameraCount').textContent = cameraTargetImages().length + ' page(s) so far';
+  save();
+}
+
+$('#captureShot').addEventListener('click', capturePage);
+$('#closeCameraModal').addEventListener('click', closeCamera);
+$('#switchCamera').addEventListener('click', ()=>{
+  cameraFacing = cameraFacing==='environment' ? 'user' : 'environment';
+  startCameraStream();
+});
+$('#scanAnswerKey').addEventListener('click', ()=>openCamera('answerkey'));
+
 function renderStudents(){
   const wrap = $('#studentsList');
   if(!state.students.length){ wrap.innerHTML = '<p class="note">No students added yet.</p>'; return; }
@@ -709,12 +797,12 @@ function renderStudents(){
           <label class="sans">Roll no.</label>
           <input type="text" class="stu-roll" data-i="${i}" value="${s.roll.replace(/"/g,'&quot;')}">
         </div>
-        <div class="field" style="max-width:260px;">
+                <div class="field" style="max-width:260px;">
           <label class="sans">Answer sheet photo(s)</label>
           <input type="file" accept="image/*" multiple class="stu-file" data-i="${i}">
         </div>
-        <span class="status-tag status-${s.status}">${s.status}</span>
-        <button class="ghost" data-remove="${i}">Remove</button>
+        <button class="secondary scan-btn" type="button" data-i="${i}" style="align-self:flex-end;">📷 Scan</button>
+        <span class="status-tag status-${s.status}">${s.status}</span>        <button class="ghost" data-remove="${i}">Remove</button>
       </div>
       <div class="thumbs">${s.images.map((im,j)=>`<img src="${im}" data-i="${i}" data-j="${j}" class="thumb-remove" title="Click to remove">`).join('')}</div>
       ${s.error ? `<p class="note" style="color:var(--pen-red)">${s.error}</p>` : ''}
@@ -730,7 +818,7 @@ function renderStudents(){
     const i=+e.target.dataset.i, j=+e.target.dataset.j;
     state.students[i].images.splice(j,1); save(); renderStudents();
   }));
-  $$('.stu-file').forEach(inp=>inp.addEventListener('change', async e=>{
+     $$('.stu-file').forEach(inp=>inp.addEventListener('change', async e=>{
     const i = +e.target.dataset.i;
     const files = Array.from(e.target.files);
     for(const f of files){
@@ -738,6 +826,16 @@ function renderStudents(){
       catch(err){ console.error(err); }
     }
     save(); renderStudents();
+  }));
+  $$('.scan-btn').forEach(b=>b.addEventListener('click', e=>{
+    openCamera(+e.target.dataset.i);
+  }));
+}
+  }));
+  $$('.scan-btn').forEach(b=>b.addEventListener('click', e=>{
+    openCamera(+e.target.dataset.i);
+  }));
+}
   }));
 }
 
