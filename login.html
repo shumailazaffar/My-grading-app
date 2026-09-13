@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Login — GradeAI</title>
+
+  <style>
+    :root {
+      --bg: #f7f8f5;
+      --surface: #ffffff;
+      --text: #16201b;
+      --muted: #68736d;
+      --primary: #0f5c4b;
+      --primary-dark: #094638;
+      --border: #dde4df;
+      --danger: #b5432e;
+      --shadow: 0 18px 55px rgba(17, 32, 25, 0.09);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Arial,
+        sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(15, 92, 75, 0.08), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(176, 139, 46, 0.07), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .page {
+      width: min(1080px, 100%);
+      min-height: 680px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    /* LEFT */
+
+    .brand-panel {
+      position: relative;
+      padding: 52px;
+      background:
+        linear-gradient(145deg, #0d5949, #0f5c4b 55%, #124d41);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    .brand-panel::before,
+    .brand-panel::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.1);
+      pointer-events: none;
+    }
+
+    .brand-panel::before {
+      width: 360px;
+      height: 360px;
+      right: -160px;
+      top: -120px;
+    }
+
+    .brand-panel::after {
+      width: 500px;
+      height: 500px;
+      left: -250px;
+      bottom: -270px;
+    }
+
+    .brand {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.2rem;
+      font-weight: 800;
+    }
+
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 13px;
+      background: rgba(255,255,255,0.13);
+      border: 1px solid rgba(255,255,255,0.2);
+      display: grid;
+      place-items: center;
+      font-size: 1.15rem;
+      font-weight: 900;
+    }
+
+    .brand-copy {
+      position: relative;
+      z-index: 1;
+      max-width: 440px;
+    }
+
+    .brand-copy .eyebrow {
+      display: inline-block;
+      padding: 7px 10px;
+      margin-bottom: 18px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.11);
+      border: 1px solid rgba(255,255,255,0.13);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .brand-copy h1 {
+      font-size: clamp(2.3rem, 4vw, 4rem);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+      margin-bottom: 18px;
+    }
+
+    .brand-copy p {
+      color: rgba(255,255,255,0.78);
+      line-height: 1.75;
+      font-size: 0.98rem;
+    }
+
+    .brand-features {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 10px;
+    }
+
+    .brand-feature {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(255,255,255,0.85);
+      font-size: 0.86rem;
+    }
+
+    .feature-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #fff;
+      flex: 0 0 auto;
+    }
+
+    /* RIGHT */
+
+    .form-panel {
+      padding: 52px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .back-link {
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+      margin-bottom: 26px;
+      display: inline-flex;
+      width: fit-content;
+    }
+
+    .back-link:hover {
+      color: var(--primary);
+    }
+
+    .form-panel h2 {
+      font-size: 2rem;
+      letter-spacing: -0.04em;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .field {
+      margin-bottom: 17px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 0.79rem;
+      font-weight: 800;
+      color: #4d5952;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    input {
+      width: 100%;
+      height: 50px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0 14px;
+      background: #fbfcfb;
+      color: var(--text);
+      font-size: 0.94rem;
+      outline: none;
+      transition: 0.18s ease;
+    }
+
+    input:focus {
+      background: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(15, 92, 75, 0.08);
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 800;
+      padding: 5px;
+    }
+
+    .password-toggle:hover {
+      color: var(--primary);
+    }
+
+    .row {
+      margin: 2px 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .remember {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .remember input {
+      width: 15px;
+      height: 15px;
+      accent-color: var(--primary);
+      box-shadow: none;
+    }
+
+    .forgot {
+      color: var(--primary);
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    .forgot:hover {
+      text-decoration: underline;
+    }
+
+    .login-btn {
+      width: 100%;
+      height: 52px;
+      border: 0;
+      border-radius: 13px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.94rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: 0.2s ease;
+      box-shadow: 0 10px 24px rgba(15, 92, 75, 0.18);
+    }
+
+    .login-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .login-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #8a938e;
+      font-size: 0.74rem;
+      margin: 25px 0;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      height: 1px;
+      background: var(--border);
+      flex: 1;
+    }
+
+    .signup-text {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .signup-text a {
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .message {
+      display: none;
+      margin-bottom: 16px;
+      padding: 11px 12px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .message.show {
+      display: block;
+    }
+
+    .message.error {
+      background: #f9ebe7;
+      color: var(--danger);
+      border: 1px solid #efcfc7;
+    }
+
+    .message.success {
+      background: #eaf4ef;
+      color: var(--primary);
+      border: 1px solid #cce1d8;
+    }
+
+    .demo-note {
+      margin-top: 18px;
+      padding: 11px 12px;
+      border-radius: 10px;
+      background: #f7f8f7;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.72rem;
+      line-height: 1.55;
+    }
+
+    /* RESPONSIVE */
+
+    @media (max-width: 820px) {
+      body {
+        padding: 14px;
+      }
+
+      .page {
+        grid-template-columns: 1fr;
+        min-height: auto;
+      }
+
+      .brand-panel {
+        padding: 34px;
+        min-height: 360px;
+      }
+
+      .brand-copy h1 {
+        font-size: 2.8rem;
+      }
+
+      .brand-features {
+        margin-top: 30px;
+      }
+
+      .form-panel {
+        padding: 34px;
+      }
+    }
+
+    @media (max-width: 500px) {
+      .brand-panel,
+      .form-panel {
+        padding: 25px;
+      }
+
+      .brand-copy h1 {
+        font-size: 2.35rem;
+      }
+
+      .form-panel h2 {
+        font-size: 1.7rem;
+      }
+
+      .row {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="page">
+
+    <!-- LEFT PANEL -->
+
+    <section class="brand-panel">
+
+      <a href="index.html" class="brand">
+        <div class="brand-mark">G</div>
+        <span>GradeAI</span>
+      </a>
+
+      <div class="brand-copy">
+
+        <div class="eyebrow">
+          Teacher workspace
+        </div>
+
+        <h1>
+          Welcome back.
+        </h1>
+
+        <p>
+          Sign in to manage your tests, grade answer sheets,
+          review AI results and keep your classes organised.
+        </p>
+
+      </div>
+
+      <div class="brand-features">
+
+        <div class="brand-feature">
+          <span class="feature-dot"></span>
+          AI-powered exam grading
+        </div>
+
+        <div class="brand-feature">
+          <span class="feature-dot"></span>
+          Camera and document scanning
+        </div>
+
+        <div class="brand-feature">
+          <span class="feature-dot"></span>
+          Smart results and reports
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- RIGHT PANEL -->
+
+    <section class="form-panel">
+
+      <a href="index.html" class="back-link">
+        ← Back to GradeAI
+      </a>
+
+      <h2>Sign in</h2>
+
+      <p class="subtitle">
+        Enter your account details to continue to your dashboard.
+      </p>
+
+      <div id="message" class="message"></div>
+
+      <form id="loginForm" novalidate>
+
+        <div class="field">
+
+          <label for="email">
+            Email address
+          </label>
+
+          <input
+            type="email"
+            id="email"
+            name="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+            required
+          >
+
+        </div>
+
+        <div class="field">
+
+          <label for="password">
+            Password
+          </label>
+
+          <div class="input-wrap">
+
+            <input
+              type="password"
+              id="password"
+              name="password"
+              autocomplete="current-password"
+              placeholder="Enter your password"
+              required
+              minlength="6"
+            >
+
+            <button
+              type="button"
+              class="password-toggle"
+              id="togglePassword"
+            >
+              Show
+            </button>
+
+          </div>
+
+        </div>
+
+        <div class="row">
+
+          <label class="remember">
+            <input type="checkbox" id="remember">
+            <span>Remember me</span>
+          </label>
+
+          <a href="#" class="forgot" id="forgotLink">
+            Forgot password?
+          </a>
+
+        </div>
+
+        <button
+          type="submit"
+          class="login-btn"
+          id="loginBtn"
+        >
+          Sign in to GradeAI
+        </button>
+
+      </form>
+
+      <div class="divider">
+        OR
+      </div>
+
+      <div class="signup-text">
+        Don't have an account?
+        <a href="signup.html">Create one</a>
+      </div>
+
+      <div class="demo-note">
+        Authentication is currently being built as part of the GradeAI
+        development process. This screen is the frontend foundation;
+        secure account/database authentication will be connected next.
+      </div>
+
+    </section>
+
+  </div>
+
+  <script>
+    const loginForm = document.getElementById("loginForm");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const loginBtn = document.getElementById("loginBtn");
+    const message = document.getElementById("message");
+    const togglePassword = document.getElementById("togglePassword");
+    const forgotLink = document.getElementById("forgotLink");
+
+    function showMessage(text, type) {
+      message.textContent = text;
+      message.className = "message show " + type;
+    }
+
+    togglePassword.addEventListener("click", () => {
+      const isPassword = passwordInput.type === "password";
+
+      passwordInput.type = isPassword ? "text" : "password";
+      togglePassword.textContent = isPassword ? "Hide" : "Show";
+    });
+
+    forgotLink.addEventListener("click", (event) => {
+      event.preventDefault();
+
+      showMessage(
+        "Password recovery backend abhi connect nahi hua. Ye next authentication step mein add hoga.",
+        "error"
+      );
+    });
+
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!email) {
+        showMessage("Email address enter karein.", "error");
+        emailInput.focus();
+        return;
+      }
+
+      if (!email.includes("@")) {
+        showMessage("Valid email address enter karein.", "error");
+        emailInput.focus();
+        return;
+      }
+
+      if (!password) {
+        showMessage("Password enter karein.", "error");
+        passwordInput.focus();
+        return;
+      }
+
+      if (password.length < 6) {
+        showMessage("Password kam az kam 6 characters ka hona chahiye.", "error");
+        passwordInput.focus();
+        return;
+      }
+
+      loginBtn.disabled = true;
+      loginBtn.textContent = "Signing in...";
+
+      /*
+        Real authentication yahan later connect hogi.
+
+        Example future flow:
+
+        const response = await fetch("/.netlify/functions/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email,
+            password
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error);
+        }
+
+        window.location.href = "dashboard.html";
+      */
+
+      setTimeout(() => {
+        showMessage(
+          "Login UI ready hai. Real secure authentication next step mein connect karenge.",
+          "success"
+        );
+
+        loginBtn.disabled = false;
+        loginBtn.textContent = "Sign in to GradeAI";
+      }, 700);
+    });
+  </script>
+
+</body>
+</html>
